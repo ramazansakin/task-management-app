@@ -15,7 +15,7 @@ public class TaskMapperManuel {
                 task.getDescription(),
                 task.getStatus(),
                 task.getCreatedAt(),
-                task.getUpdatedAt()
+                task.get
         );
     }
 

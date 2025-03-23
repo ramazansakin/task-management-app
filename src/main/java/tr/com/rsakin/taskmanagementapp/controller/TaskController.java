@@ -1,6 +1,7 @@
 package tr.com.rsakin.taskmanagementapp.controller;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -11,8 +12,11 @@ import tr.com.rsakin.taskmanagementapp.model.dto.response.TaskResponseDTO;
 import tr.com.rsakin.taskmanagementapp.model.entity.Task;
 import tr.com.rsakin.taskmanagementapp.service.TaskService;
 
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 
 @RestController
 @RequestMapping("/api/tasks")
@@ -100,6 +104,88 @@ public class TaskController {
     public ResponseEntity<Void> deleteTask(@PathVariable UUID id) {
         taskService.deleteTask(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/status/{status}")
+    public ResponseEntity<List<TaskResponseDTO>> getTasksByStatus(@PathVariable Task.TaskStatus status) {
+        return ResponseEntity.ok(taskService.getTasksByStatus(status));
+    }
+
+    @GetMapping("/search")
+    public ResponseEntity<List<TaskResponseDTO>> searchTasks(@RequestParam String term) {
+        return ResponseEntity.ok(taskService.searchTasks(term));
+    }
+
+    @GetMapping("/title/{title}")
+    public ResponseEntity<TaskResponseDTO> findTaskByTitle(@PathVariable String title) {
+        return taskService.findTaskByTitle(title)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    @GetMapping("/created-before")
+    public ResponseEntity<List<TaskResponseDTO>> getTasksCreatedBefore(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime dateTime) {
+        return ResponseEntity.ok(taskService.getTasksCreatedBefore(dateTime));
+    }
+
+    @GetMapping("/statuses")
+    public ResponseEntity<List<Task.TaskStatus>> getAvailableStatuses() {
+        return ResponseEntity.ok(taskService.getAvailableStatuses());
+    }
+
+    @GetMapping("/statistics")
+    public ResponseEntity<TaskService.TaskStatistics> getTaskStatistics() {
+        return ResponseEntity.ok(taskService.getTaskStatistics());
+    }
+
+    @GetMapping("/count-by-status")
+    public ResponseEntity<Map<Task.TaskStatus, Long>> getTaskCountByStatus() {
+        return ResponseEntity.ok(taskService.getTaskCountByStatus());
+    }
+
+    @GetMapping("/{id}/priority")
+    public ResponseEntity<String> getTaskPriority(@PathVariable UUID id) {
+        try {
+            return ResponseEntity.ok(taskService.getTaskPriority(id));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    @GetMapping("/report")
+    public ResponseEntity<String> generateTaskReport() {
+        return ResponseEntity.ok(taskService.generateTaskReport());
+    }
+
+    @GetMapping("/async")
+    public CompletableFuture<ResponseEntity<List<TaskResponseDTO>>> getTasksAsync() {
+        return taskService.getTasksAsync()
+                .thenApply(ResponseEntity::ok);
+    }
+
+    @GetMapping("/group-by-status")
+    public ResponseEntity<Map<Task.TaskStatus, List<TaskResponseDTO>>> groupTasksByStatus() {
+        return ResponseEntity.ok(taskService.groupTasksByStatus());
+    }
+
+    @PostMapping("/analyze-durations")
+    public ResponseEntity<List<String>> analyzeTaskDurations(@RequestBody List<TaskService.TaskDuration> durations) {
+        return ResponseEntity.ok(taskService.analyzeTaskDurations(durations));
+    }
+
+    @GetMapping("/{id}/summary")
+    public ResponseEntity<String> getTaskSummary(@PathVariable UUID id) {
+        try {
+            return ResponseEntity.ok(taskService.getTaskSummary(id));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    @GetMapping("/has-status/{status}")
+    public ResponseEntity<Boolean> hasTaskWithStatus(@PathVariable Task.TaskStatus status) {
+        return ResponseEntity.ok(taskService.hasTaskWithStatus(status));
     }
 
 }

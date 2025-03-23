@@ -7,7 +7,6 @@ import tr.com.rsakin.taskmanagementapp.model.entity.Task;
 
 import java.time.Duration;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
 
@@ -24,7 +23,7 @@ public class ReactiveTaskService {
     // HashMap is faster for non-concurrent operations, while LinkedHashMap is faster for concurrent operations.
     // LinkedHashMap is more memory-efficient than HashMap, as it keeps the order of insertion.
     // We can use whether HashMap or LinkedHashMap depending on the requirements
-    private final Map<UUID, Task> taskStore = new LinkedHashMap<>();
+    private final Map<UUID, Task> taskStore = new HashMap<>();
 
     public Mono<Task> createTask(String title, String description) {
         return Mono.fromCallable(() -> {
@@ -37,9 +36,9 @@ public class ReactiveTaskService {
                 throw new IllegalArgumentException("Task description cannot be null");
             }
 
-            Task task = new Task.Builder()
-                    .withTitle(title)
-                    .withDescription(description)
+            Task task = Task.builder()
+                    .title(title)
+                    .description(description)
                     .build();
 
             taskStore.put(task.getId(), task);
