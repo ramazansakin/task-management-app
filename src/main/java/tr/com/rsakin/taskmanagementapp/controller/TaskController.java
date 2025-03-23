@@ -6,6 +6,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import tr.com.rsakin.taskmanagementapp.model.dto.request.PriorityUpdateRequest;
 import tr.com.rsakin.taskmanagementapp.model.dto.request.StatusUpdateRequest;
 import tr.com.rsakin.taskmanagementapp.model.dto.request.TaskRequest;
 import tr.com.rsakin.taskmanagementapp.model.dto.response.TaskResponseDTO;
@@ -186,6 +187,53 @@ public class TaskController {
     @GetMapping("/has-status/{status}")
     public ResponseEntity<Boolean> hasTaskWithStatus(@PathVariable Task.TaskStatus status) {
         return ResponseEntity.ok(taskService.hasTaskWithStatus(status));
+    }
+
+    @GetMapping("/{id}/priority-object")
+    public ResponseEntity<Map<String, Object>> getTaskPriorityObject(@PathVariable UUID id) {
+        try {
+            Task.TaskPriority priority = taskService.getTaskPriorityObject(id);
+
+            // Create a map to represent the priority since we can't directly serialize the interface
+            Map<String, Object> response = Map.of(
+                    "label", priority.getLabel(),
+                    "value", priority.getValue(),
+                    "type", priority.getClass().getSimpleName()
+            );
+
+            return ResponseEntity.ok(response);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    @GetMapping("/priority/{value}")
+    public ResponseEntity<List<TaskResponseDTO>> getTasksByPriority(@PathVariable int value) {
+        if (value < 1 || value > 3) {
+            return ResponseEntity.badRequest().build();
+        }
+
+        return ResponseEntity.ok(taskService.getTasksByPriority(value));
+    }
+
+    @PostMapping("/{id}/priority")
+    public ResponseEntity<Task> updateTaskPriority(
+            @PathVariable UUID id,
+            @RequestBody PriorityUpdateRequest request) {
+        try {
+            // Convert string or int to TaskPriority object based on request
+            Task.TaskPriority priority = switch(request.value()) {
+                case 1 -> new Task.LowPriority();
+                case 2 -> new Task.MediumPriority();
+                case 3 -> new Task.HighPriority();
+                default -> throw new IllegalArgumentException("Invalid priority value");
+            };
+
+            Task updatedTask = taskService.updateTaskPriority(id, priority);
+            return ResponseEntity.ok(updatedTask);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(null);
+        }
     }
 
 }

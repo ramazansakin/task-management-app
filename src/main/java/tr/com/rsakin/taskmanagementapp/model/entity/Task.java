@@ -15,20 +15,23 @@ public class Task {
     private final UUID id;
     private final String title;
     private final String description;
+    @With // Lombok's @With creates immutable "with" methods
     private final TaskStatus status;
     private final LocalDateTime createdAt;
-    private final LocalDateTime updatedAt;
+    @With
+    private final TaskPriority priority;
 
-    // Immutable pattern - returns a new instance
+    // Lombok builder with default values
+    public static class TaskBuilder {
+        private UUID id = UUID.randomUUID();
+        private TaskStatus status = TaskStatus.PENDING;
+        private LocalDateTime createdAt = LocalDateTime.now();
+        private TaskPriority priority = new LowPriority();
+    }
+
+    // Immutable pattern using Lombok's @With
     public Task updateStatus(TaskStatus newStatus) {
-        return Task.builder()
-                .id(this.id)
-                .title(this.title)
-                .description(this.description)
-                .status(newStatus)
-                .createdAt(this.createdAt)
-                .updatedAt(LocalDateTime.now())
-                .build();
+        return this.withStatus(newStatus);
     }
 
     // Using Java 17 sealed classes for task status
@@ -77,5 +80,4 @@ public class Task {
             return 3;
         }
     }
-
 }

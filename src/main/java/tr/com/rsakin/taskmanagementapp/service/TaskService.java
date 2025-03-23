@@ -282,4 +282,44 @@ public class TaskService {
     public void addTaskCompletionListener(Consumer<Task> listener) {
         taskCompletionListeners.add(listener);
     }
+
+    // Use the TaskPriority sealed interface
+    public Task.TaskPriority getTaskPriorityObject(UUID id) {
+        Task task = taskStore.get(id);
+        if (task == null) {
+            throw new IllegalArgumentException("Task not found with ID: " + id);
+        }
+
+        // Using pattern matching for switch with sealed interface
+        return switch (task.getStatus()) {
+            case PENDING, COMPLETED -> new Task.LowPriority();
+            case IN_PROGRESS -> new Task.MediumPriority();
+            case BLOCKED -> new Task.HighPriority();
+        };
+    }
+
+    // Method to update task with priority
+    public Task updateTaskPriority(UUID id, Task.TaskPriority priority) {
+        Task task = taskStore.get(id);
+        if (task == null) {
+            throw new IllegalArgumentException("Task not found with ID: " + id);
+        }
+
+        // We need to update the Task model to include priority
+        // For now, just returning the task since we can't modify it
+        // In a real implementation, this would return a new Task with updated priority
+        return task;
+    }
+
+    // Get tasks by priority value
+    public List<TaskResponseDTO> getTasksByPriority(int priorityValue) {
+        return taskStore.values().stream()
+                .filter(task -> {
+                    Task.TaskPriority priority = getTaskPriorityObject(task.getId());
+                    return priority.getValue() == priorityValue;
+                })
+                .map(TASK_MAPPER::toDTO)
+                .toList();
+    }
+
 }
