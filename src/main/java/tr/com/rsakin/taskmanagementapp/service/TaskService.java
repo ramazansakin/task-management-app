@@ -1,14 +1,19 @@
 package tr.com.rsakin.taskmanagementapp.service;
 
+import jakarta.transaction.Transactional;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import tr.com.rsakin.taskmanagementapp.model.dto.response.TaskResponseDTO;
+import tr.com.rsakin.taskmanagementapp.model.dto.response.TaskStatistics;
 import tr.com.rsakin.taskmanagementapp.model.entity.Task;
 import tr.com.rsakin.taskmanagementapp.model.mapper.ManualTaskMapper;
 import tr.com.rsakin.taskmanagementapp.model.mapper.TaskResponseMapper;
+import tr.com.rsakin.taskmanagementapp.repository.TaskRepository;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executors;
@@ -16,15 +21,16 @@ import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 @Service
+@RequiredArgsConstructor
 public class TaskService {
-    // In-memory storage (will replace with DB in later weeks)
-    private final Map<UUID, Task> taskStore = new HashMap<>();
-    private static final TaskResponseMapper TASK_MAPPER = TaskResponseMapper.INSTANCE;
+
+    private final TaskRepository taskRepository;
 
     // Event publishing for task operations (Java 8 functional interfaces)
     private final List<Consumer<Task>> taskCreationListeners = new ArrayList<>();
     private final List<Consumer<Task>> taskCompletionListeners = new ArrayList<>();
 
+    @Transactional
     public TaskResponseDTO createTask(String title, String description) {
         validateTaskInput(title, description);
 
@@ -33,39 +39,49 @@ public class TaskService {
                 .description(description)
                 .build();
 
-        taskStore.put(task.getId(), task);
-        return ManualTaskMapper.toDTO(task); // Manual mapping here
+        Task savedTask = taskRepository.save(task);
+
+        // Notify creation listeners
+        taskCreationListeners.forEach(listener -> listener.accept(savedTask));
+
+        return ManualTaskMapper.toDTO(savedTask);
     }
 
     public List<TaskResponseDTO> getAllTasks() {
-        ArrayList<Task> tasks = new ArrayList<>(taskStore.values());
-        return TASK_MAPPER.toDTOList(tasks); // Using MapStruct
+        return TaskResponseMapper.INSTANCE.toDTOList(taskRepository.findAll());
     }
 
     public TaskResponseDTO getTaskById(UUID id) {
-        Task task = taskStore.get(id);
-        return TASK_MAPPER.toDTO(task); // Using MapStruct
+        return taskRepository.findById(id)
+                .map(TaskResponseMapper.INSTANCE::toDTO)
+                .orElse(null);
     }
 
+    @Transactional
     public Task updateTaskStatus(UUID id, Task.TaskStatus newStatus) {
-        Task task = taskStore.get(id);
-        if (task == null) {
-            throw new IllegalArgumentException("Task not found with ID: " + id);
-        }
+        Task task = taskRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Task not found with ID: " + id));
 
         if (task.getStatus() == Task.TaskStatus.BLOCKED)
             throw new TaskStatusNotAvailableException("Task not found with ID: " + id);
 
         Task updatedTask = task.updateStatus(newStatus);
-        taskStore.put(id, updatedTask);
-        return updatedTask;
+        Task savedTask = taskRepository.save(updatedTask);
+
+        // Notify completion listeners if task is completed
+        if (newStatus == Task.TaskStatus.COMPLETED) {
+            taskCompletionListeners.forEach(listener -> listener.accept(savedTask));
+        }
+
+        return savedTask;
     }
 
+    @Transactional
     public void deleteTask(UUID id) {
-        taskStore.remove(id);
+        taskRepository.deleteById(id);
     }
 
-    // Clean code: Validation extracted to a separate method
+    // Validation
     private void validateTaskInput(String title, String description) {
         if (title == null || title.trim().isEmpty()) {
             throw new IllegalArgumentException("Task title cannot be empty");
@@ -76,100 +92,80 @@ public class TaskService {
         }
     }
 
-    // Java 8: Stream API for filtering tasks
+    // Methods using JPA standard repository methods
+
     public List<TaskResponseDTO> getTasksByStatus(Task.TaskStatus status) {
-        return taskStore.values().stream()
-                .filter(task -> task.getStatus() == status)
-                .map(TASK_MAPPER::toDTO)
-                .toList();
+        return taskRepository.findByStatus(status).stream()
+                .map(TaskResponseMapper.INSTANCE::toDTO)
+                .collect(Collectors.toList());
     }
 
-    // Java 8: Optional for potentially null values
     public Optional<TaskResponseDTO> findTaskByTitle(String title) {
-        return taskStore.values().stream()
-                .filter(task -> task.getTitle().equalsIgnoreCase(title))
+        return taskRepository.findByTitleContainingIgnoreCase(title).stream()
                 .findFirst()
-                .map(TASK_MAPPER::toDTO);
+                .map(TaskResponseMapper.INSTANCE::toDTO);
     }
 
-    // Java 9: Factory methods for collections
-    public List<Task.TaskStatus> getAvailableStatuses() {
-        return List.of(Task.TaskStatus.values());
+    // Methods using JPQL queries
+
+    public List<TaskResponseDTO> getTasksByPriority(int priorityValue) {
+        return taskRepository.findTasksByPriorityValue(priorityValue).stream()
+                .map(TaskResponseMapper.INSTANCE::toDTO)
+                .collect(Collectors.toList());
     }
 
-    // Java 9: Stream improvements - takeWhile
-    public List<TaskResponseDTO> getTasksCreatedBefore(LocalDateTime dateTime) {
-        return taskStore.values().stream()
-                .sorted(Comparator.comparing(Task::getCreatedAt).reversed())
-                .takeWhile(task -> task.getCreatedAt().isBefore(dateTime))
-                .map(TASK_MAPPER::toDTO)
-                .toList();
+    // Methods using native queries
+    @Transactional
+    public Map<String, Object> getTaskStatusStatistics() {
+        List<Object[]> rawStats = taskRepository.getTaskStatusStatistics();
+
+        Map<String, Object> formattedStats = new HashMap<>();
+        formattedStats.put("totalTasks", taskRepository.count());
+
+        List<Map<String, Object>> statusStats = rawStats.stream()
+                .map(row -> {
+                    Map<String, Object> stat = new HashMap<>();
+                    stat.put("status", row[0]);
+                    stat.put("count", row[1]);
+                    stat.put("oldestTask", row[2]);
+                    stat.put("newestTask", row[3]);
+                    return stat;
+                })
+                .collect(Collectors.toList());
+
+        formattedStats.put("statusBreakdown", statusStats);
+        return formattedStats;
     }
 
-    // Java 10: Local variable type inference
-    public Map<Task.TaskStatus, Long> getTaskCountByStatus() {
-        var result = new HashMap<Task.TaskStatus, Long>();
-
-        for (var status : Task.TaskStatus.values()) {
-            var count = taskStore.values().stream()
-                    .filter(task -> task.getStatus() == status)
-                    .count();
-            result.put(status, count);
-        }
-
-        return result;
+    // Observer pattern methods
+    public void addTaskCreationListener(Consumer<Task> listener) {
+        taskCreationListeners.add(listener);
     }
 
-    // Java 11: String API improvements
-    public List<TaskResponseDTO> searchTasks(String searchTerm) {
-        if (searchTerm.isBlank()) {
-            return getAllTasks();
-        }
-
-        return taskStore.values().stream()
-                .filter(task ->
-                        task.getTitle().contains(searchTerm) ||
-                        (task.getDescription() != null && task.getDescription().contains(searchTerm)))
-                .map(TASK_MAPPER::toDTO)
-                .toList();
+    public void addTaskCompletionListener(Consumer<Task> listener) {
+        taskCompletionListeners.add(listener);
     }
-
-    // Java 12: Switch expressions (preview in 12, standard in 14)
-    public String getTaskPriority(UUID id) {
-        Task task = taskStore.get(id);
-        if (task == null) {
-            throw new IllegalArgumentException("Task not found with ID: " + id);
-        }
-
-        return switch (task.getStatus()) {
-            case PENDING -> "Low";
-            case IN_PROGRESS -> "Medium";
-            case BLOCKED -> "High";
-            case COMPLETED -> "None";
-        };
-    }
-
-    // Java 14: Records (preview in 14, standard in 16) for DTOs
-    public record TaskStatistics(long total, long pending, long inProgress, long blocked, long completed) {}
 
     public TaskStatistics getTaskStatistics() {
-        long total = taskStore.size();
-        long pending = countTasksByStatus(Task.TaskStatus.PENDING);
-        long inProgress = countTasksByStatus(Task.TaskStatus.IN_PROGRESS);
-        long blocked = countTasksByStatus(Task.TaskStatus.BLOCKED);
-        long completed = countTasksByStatus(Task.TaskStatus.COMPLETED);
+        long total = taskRepository.count();
+        long pending = taskRepository.countByStatus(Task.TaskStatus.PENDING);
+        long inProgress = taskRepository.countByStatus(Task.TaskStatus.IN_PROGRESS);
+        long blocked = taskRepository.countByStatus(Task.TaskStatus.BLOCKED);
+        long completed = taskRepository.countByStatus(Task.TaskStatus.COMPLETED);
 
         return new TaskStatistics(total, pending, inProgress, blocked, completed);
     }
 
-    private long countTasksByStatus(Task.TaskStatus status) {
-        return taskStore.values().stream()
+    private long countTasksByStatus(Task.TaskStatus status, List<Task> tasks) {
+        return tasks.stream()
                 .filter(task -> task.getStatus() == status)
                 .count();
     }
 
     // Java 15: Text blocks for complex queries
     public String generateTaskReport() {
+        List<Task> tasks = taskRepository.findAll();
+        int taskSize = tasks.size();
         return """
                 TASK MANAGEMENT REPORT
                 ----------------------
@@ -181,11 +177,11 @@ public class TaskService {
                 
                 Last Updated: %s
                 """.formatted(
-                taskStore.size(),
-                countTasksByStatus(Task.TaskStatus.PENDING),
-                countTasksByStatus(Task.TaskStatus.IN_PROGRESS),
-                countTasksByStatus(Task.TaskStatus.BLOCKED),
-                countTasksByStatus(Task.TaskStatus.COMPLETED),
+                taskSize,
+                countTasksByStatus(Task.TaskStatus.PENDING, tasks),
+                countTasksByStatus(Task.TaskStatus.IN_PROGRESS, tasks),
+                countTasksByStatus(Task.TaskStatus.BLOCKED, tasks),
+                countTasksByStatus(Task.TaskStatus.COMPLETED, tasks),
                 LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME)
         );
     }
@@ -194,7 +190,7 @@ public class TaskService {
     public String getTaskDescription(Object taskIdentifier) {
         switch (taskIdentifier) {
             case UUID id -> {
-                Task task = taskStore.get(id);
+                Task task = taskRepository.findById(id).get(); // check if task exists
                 return task != null ? task.getDescription() : "Task not found";
             }
             case String title -> {
@@ -219,7 +215,7 @@ public class TaskService {
     public String describeTask(Object obj) {
         return switch (obj) {
             case UUID id -> {
-                Task task = taskStore.get(id);
+                Task task = taskRepository.findById(id).get(); // check if task exists
                 yield task != null ? "Task: " + task.getTitle() : "Unknown task";
             }
             case Task task -> "Task: " + task.getTitle() + " (" + task.getStatus() + ")";
@@ -246,7 +242,7 @@ public class TaskService {
 
     // Java 22: String Templates (preview)
     public String getTaskSummary(UUID id) {
-        Task task = taskStore.get(id);
+        Task task = taskRepository.findById(id).get(); // check if task exists
         if (task == null) {
             throw new IllegalArgumentException("Task not found with ID: " + id);
         }
@@ -259,7 +255,8 @@ public class TaskService {
 
     // Java 23: Unnamed patterns and variables (preview)
     public boolean hasTaskWithStatus(Task.TaskStatus status) {
-        return taskStore.values().stream()
+        List<Task> tasks = taskRepository.findAll();
+        return tasks.stream()
                 .anyMatch(task -> switch (task) {
                     // In actual Java 23 code: case Task(_, _, _, status, _) -> true;
                     case Task t when t.getStatus() == status -> true;
@@ -271,25 +268,17 @@ public class TaskService {
     public Map<Task.TaskStatus, List<TaskResponseDTO>> groupTasksByStatus() {
         // In Java 24 this would use the new Stream.gather() API
         // For now using traditional groupingBy collector
-        return taskStore.values().stream()
+        List<Task> tasks = taskRepository.findAll();
+        return tasks.stream()
                 .collect(Collectors.groupingBy(
                         Task::getStatus,
-                        Collectors.mapping(TASK_MAPPER::toDTO, Collectors.toList())
+                        Collectors.mapping(TaskResponseMapper.INSTANCE::toDTO, Collectors.toList())
                 ));
-    }
-
-    // Observer pattern for task lifecycle events (Java 8 functional interfaces)
-    public void addTaskCreationListener(Consumer<Task> listener) {
-        taskCreationListeners.add(listener);
-    }
-
-    public void addTaskCompletionListener(Consumer<Task> listener) {
-        taskCompletionListeners.add(listener);
     }
 
     // Use the TaskPriority sealed interface
     public Task.Priority getTaskPriorityObject(UUID id) {
-        Task task = taskStore.get(id);
+        Task task = taskRepository.findById(id).get(); // check if task exists
         if (task == null) {
             throw new IllegalArgumentException("Task not found with ID: " + id);
         }
@@ -304,7 +293,7 @@ public class TaskService {
 
     // Method to update task with priority
     public Task updateTaskPriority(UUID id, Task.Priority priority) {
-        Task task = taskStore.get(id);
+        Task task = taskRepository.findById(id).get(); // check if task exists
         if (task == null) {
             throw new IllegalArgumentException("Task not found with ID: " + id);
         }
@@ -313,17 +302,6 @@ public class TaskService {
         // For now, just returning the task since we can't modify it
         // In a real implementation, this would return a new Task with updated priority
         return task;
-    }
-
-    // Get tasks by priority value
-    public List<TaskResponseDTO> getTasksByPriority(int priorityValue) {
-        return taskStore.values().stream()
-                .filter(task -> {
-                    Task.Priority priority = getTaskPriorityObject(task.getId());
-                    return priority.getValue() == priorityValue;
-                })
-                .map(TASK_MAPPER::toDTO)
-                .toList();
     }
 
 }
