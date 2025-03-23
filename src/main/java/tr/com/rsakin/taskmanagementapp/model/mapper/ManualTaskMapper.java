@@ -3,7 +3,9 @@ package tr.com.rsakin.taskmanagementapp.model.mapper;
 import tr.com.rsakin.taskmanagementapp.model.dto.response.TaskResponseDTO;
 import tr.com.rsakin.taskmanagementapp.model.entity.Task;
 
-public class TaskMapperManuel {
+public class ManualTaskMapper {
+
+    private ManualTaskMapper() {}
 
     public static TaskResponseDTO toDTO(Task task) {
         if (task == null) {
@@ -15,7 +17,7 @@ public class TaskMapperManuel {
                 task.getDescription(),
                 task.getStatus(),
                 task.getCreatedAt(),
-                task.getUpdatedAt()
+                task.getPriority()
         );
     }
 

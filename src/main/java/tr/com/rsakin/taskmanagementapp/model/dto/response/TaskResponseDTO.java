@@ -11,5 +11,5 @@ public record TaskResponseDTO(
         String description,
         Task.TaskStatus status,
         LocalDateTime createdAt,
-        LocalDateTime updatedAt
+        Task.Priority priority
 ) {}

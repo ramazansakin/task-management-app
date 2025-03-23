@@ -19,14 +19,14 @@ public class Task {
     private final TaskStatus status;
     private final LocalDateTime createdAt;
     @With
-    private final TaskPriority priority;
+    private final Priority priority;
 
     // Lombok builder with default values
     public static class TaskBuilder {
         private UUID id = UUID.randomUUID();
         private TaskStatus status = TaskStatus.PENDING;
         private LocalDateTime createdAt = LocalDateTime.now();
-        private TaskPriority priority = new LowPriority();
+        private Priority priority = new LowPriority();
     }
 
     // Immutable pattern using Lombok's @With
@@ -40,44 +40,59 @@ public class Task {
     }
 
     // Java 17 sealed classes hierarchy for task priorities
-    public sealed interface TaskPriority permits LowPriority, MediumPriority, HighPriority {
+    public sealed interface Priority permits LowPriority, MediumPriority, HighPriority {
         String getLabel();
         int getValue();
     }
 
-    public static final class LowPriority implements TaskPriority {
+    public enum TaskPriority {
+        LOW( 1, "Low"),
+        MEDIUM(2, "Medium"),
+        HIGH(3, "High");
+
+        private final int value;
+        private final String label;
+
+        TaskPriority(int value, String label) {
+            this.value = value;
+            this.label = label;
+        }
+    }
+
+    public static final class LowPriority implements Priority {
         @Override
         public String getLabel() {
-            return "Low";
+            return TaskPriority.LOW.label;
         }
 
         @Override
         public int getValue() {
-            return 1;
+            return TaskPriority.LOW.value;
         }
     }
 
-    public static final class MediumPriority implements TaskPriority {
+    public static final class MediumPriority implements Priority {
         @Override
         public String getLabel() {
-            return "Medium";
+            return TaskPriority.MEDIUM.label;
         }
 
         @Override
         public int getValue() {
-            return 2;
+            return TaskPriority.MEDIUM.value;
         }
     }
 
-    public static final class HighPriority implements TaskPriority {
+    public static final class HighPriority implements Priority {
         @Override
         public String getLabel() {
-            return "High";
+            return TaskPriority.HIGH.label;
         }
 
         @Override
         public int getValue() {
-            return 3;
+            return TaskPriority.HIGH.value;
         }
     }
+
 }

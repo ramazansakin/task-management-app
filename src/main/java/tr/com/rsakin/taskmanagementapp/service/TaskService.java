@@ -3,7 +3,7 @@ package tr.com.rsakin.taskmanagementapp.service;
 import org.springframework.stereotype.Service;
 import tr.com.rsakin.taskmanagementapp.model.dto.response.TaskResponseDTO;
 import tr.com.rsakin.taskmanagementapp.model.entity.Task;
-import tr.com.rsakin.taskmanagementapp.model.mapper.TaskMapperManuel;
+import tr.com.rsakin.taskmanagementapp.model.mapper.ManualTaskMapper;
 import tr.com.rsakin.taskmanagementapp.model.mapper.TaskResponseMapper;
 
 import java.time.Duration;
@@ -34,7 +34,7 @@ public class TaskService {
                 .build();
 
         taskStore.put(task.getId(), task);
-        return TaskMapperManuel.toDTO(task); // Manual mapping here
+        return ManualTaskMapper.toDTO(task); // Manual mapping here
     }
 
     public List<TaskResponseDTO> getAllTasks() {
@@ -284,7 +284,7 @@ public class TaskService {
     }
 
     // Use the TaskPriority sealed interface
-    public Task.TaskPriority getTaskPriorityObject(UUID id) {
+    public Task.Priority getTaskPriorityObject(UUID id) {
         Task task = taskStore.get(id);
         if (task == null) {
             throw new IllegalArgumentException("Task not found with ID: " + id);
@@ -299,7 +299,7 @@ public class TaskService {
     }
 
     // Method to update task with priority
-    public Task updateTaskPriority(UUID id, Task.TaskPriority priority) {
+    public Task updateTaskPriority(UUID id, Task.Priority priority) {
         Task task = taskStore.get(id);
         if (task == null) {
             throw new IllegalArgumentException("Task not found with ID: " + id);
@@ -315,7 +315,7 @@ public class TaskService {
     public List<TaskResponseDTO> getTasksByPriority(int priorityValue) {
         return taskStore.values().stream()
                 .filter(task -> {
-                    Task.TaskPriority priority = getTaskPriorityObject(task.getId());
+                    Task.Priority priority = getTaskPriorityObject(task.getId());
                     return priority.getValue() == priorityValue;
                 })
                 .map(TASK_MAPPER::toDTO)

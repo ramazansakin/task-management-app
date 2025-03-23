@@ -192,7 +192,7 @@ public class TaskController {
     @GetMapping("/{id}/priority-object")
     public ResponseEntity<Map<String, Object>> getTaskPriorityObject(@PathVariable UUID id) {
         try {
-            Task.TaskPriority priority = taskService.getTaskPriorityObject(id);
+            Task.Priority priority = taskService.getTaskPriorityObject(id);
 
             // Create a map to represent the priority since we can't directly serialize the interface
             Map<String, Object> response = Map.of(
@@ -222,7 +222,7 @@ public class TaskController {
             @RequestBody PriorityUpdateRequest request) {
         try {
             // Convert string or int to TaskPriority object based on request
-            Task.TaskPriority priority = switch(request.value()) {
+            Task.Priority priority = switch(request.value()) {
                 case 1 -> new Task.LowPriority();
                 case 2 -> new Task.MediumPriority();
                 case 3 -> new Task.HighPriority();
