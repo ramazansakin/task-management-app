@@ -10,6 +10,7 @@ import tr.com.rsakin.taskmanagementapp.model.dto.request.PriorityUpdateRequest;
 import tr.com.rsakin.taskmanagementapp.model.dto.request.StatusUpdateRequest;
 import tr.com.rsakin.taskmanagementapp.model.dto.request.TaskRequest;
 import tr.com.rsakin.taskmanagementapp.model.dto.response.TaskResponseDTO;
+import tr.com.rsakin.taskmanagementapp.model.dto.response.TaskStatistics;
 import tr.com.rsakin.taskmanagementapp.model.entity.Task;
 import tr.com.rsakin.taskmanagementapp.service.TaskService;
 
@@ -112,11 +113,6 @@ public class TaskController {
         return ResponseEntity.ok(taskService.getTasksByStatus(status));
     }
 
-    @GetMapping("/search")
-    public ResponseEntity<List<TaskResponseDTO>> searchTasks(@RequestParam String term) {
-        return ResponseEntity.ok(taskService.searchTasks(term));
-    }
-
     @GetMapping("/title/{title}")
     public ResponseEntity<TaskResponseDTO> findTaskByTitle(@PathVariable String title) {
         return taskService.findTaskByTitle(title)
@@ -124,34 +120,9 @@ public class TaskController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    @GetMapping("/created-before")
-    public ResponseEntity<List<TaskResponseDTO>> getTasksCreatedBefore(
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime dateTime) {
-        return ResponseEntity.ok(taskService.getTasksCreatedBefore(dateTime));
-    }
-
-    @GetMapping("/statuses")
-    public ResponseEntity<List<Task.TaskStatus>> getAvailableStatuses() {
-        return ResponseEntity.ok(taskService.getAvailableStatuses());
-    }
-
     @GetMapping("/statistics")
-    public ResponseEntity<TaskService.TaskStatistics> getTaskStatistics() {
+    public ResponseEntity<TaskStatistics> getTaskStatistics() {
         return ResponseEntity.ok(taskService.getTaskStatistics());
-    }
-
-    @GetMapping("/count-by-status")
-    public ResponseEntity<Map<Task.TaskStatus, Long>> getTaskCountByStatus() {
-        return ResponseEntity.ok(taskService.getTaskCountByStatus());
-    }
-
-    @GetMapping("/{id}/priority")
-    public ResponseEntity<String> getTaskPriority(@PathVariable UUID id) {
-        try {
-            return ResponseEntity.ok(taskService.getTaskPriority(id));
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.notFound().build();
-        }
     }
 
     @GetMapping("/report")
@@ -234,6 +205,11 @@ public class TaskController {
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(null);
         }
+    }
+
+    @GetMapping("/status-statistics")
+    public ResponseEntity<Map<String, Object>> getTaskStatusStatistics() {
+        return ResponseEntity.ok(taskService.getTaskStatusStatistics());
     }
 
 }
