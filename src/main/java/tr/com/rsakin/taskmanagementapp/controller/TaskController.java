@@ -1,7 +1,6 @@
 package tr.com.rsakin.taskmanagementapp.controller;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -15,7 +14,6 @@ import tr.com.rsakin.taskmanagementapp.model.entity.Task;
 import tr.com.rsakin.taskmanagementapp.service.TaskService;
 import tr.com.rsakin.taskmanagementapp.service.TaskStatusNotAvailableException;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -96,7 +94,7 @@ public class TaskController {
             @RequestBody StatusUpdateRequest request) {
 
         try {
-            Task updatedTask = taskService.updateTaskStatus(id, request.getStatus());
+            Task updatedTask = taskService.updateTaskStatus(id, request.status());
             return ResponseEntity.ok(updatedTask);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.notFound().build();

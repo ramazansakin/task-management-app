@@ -49,7 +49,7 @@ public class ReactiveTaskController {
             @PathVariable UUID id,
             @RequestBody StatusUpdateRequest request) {
 
-        return taskService.updateTaskStatus(id, request.getStatus())
+        return taskService.updateTaskStatus(id, request.status())
                 .onErrorResume(IllegalArgumentException.class,
                         e -> Mono.error(new TaskNotFoundException(id)));
     }
