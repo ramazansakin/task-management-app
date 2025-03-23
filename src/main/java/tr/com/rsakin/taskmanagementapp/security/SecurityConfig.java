@@ -22,6 +22,7 @@ class SecurityConfig {
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
     }
 
+    // Swagger URL - http://localhost:8080/swagger-ui/index.html
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
@@ -29,6 +30,7 @@ class SecurityConfig {
                 .cors(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/auth/login").permitAll() // ✅ Allow public access to login
+                        .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll() // ✅ Allow public access to swagger
                         .anyRequest().authenticated() // 🔒 Secure all other endpoints
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);

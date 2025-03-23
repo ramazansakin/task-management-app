@@ -1,5 +1,11 @@
 package tr.com.rsakin.taskmanagementapp.controller;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.ArraySchema;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -21,6 +27,7 @@ import java.util.concurrent.CompletableFuture;
 
 @RestController
 @RequestMapping("/api/tasks")
+@Tag(name = "Task Management", description = "API endpoints for task CRUD operations")
 public class TaskController {
 
     // Composition over inheritance
@@ -63,6 +70,17 @@ public class TaskController {
     // HTTP Response : JSON
 
     // @RequestBody : It is a Spring annotation that tells Spring to automatically deserialize the request body into the TaskRequest object.
+
+    @Operation(
+            summary = "Create a new task",
+            description = "Creates a new task with the provided title and description",
+            responses = {
+                    @ApiResponse(responseCode = "201", description = "Task created successfully",
+                            content = @Content(mediaType = "application/json",
+                                    schema = @Schema(implementation = TaskResponseDTO.class))),
+                    @ApiResponse(responseCode = "400", description = "Invalid input")
+            }
+    )
     public ResponseEntity<TaskResponseDTO> createTask(@RequestBody TaskRequest request) {
         TaskResponseDTO newTask = taskService.createTask(request.getTitle(), request.getDescription());
         return new ResponseEntity<>(newTask, HttpStatus.CREATED);
@@ -70,6 +88,15 @@ public class TaskController {
 
     // CRUD Operations
     // Create, Read, Update, Delete
+    @Operation(
+            summary = "Get all tasks",
+            description = "Retrieves a list of all tasks in the system",
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "List of tasks retrieved successfully",
+                            content = @Content(mediaType = "application/json",
+                                    array = @ArraySchema(schema = @Schema(implementation = TaskResponseDTO.class))))
+            }
+    )
     @GetMapping
     public ResponseEntity<List<TaskResponseDTO>> getAllTasks() {
         return ResponseEntity.status(HttpStatus.OK).body(taskService.getAllTasks());
@@ -78,6 +105,17 @@ public class TaskController {
     // What is URL : A URL (Uniform Resource Locator) is a string that specifies the location of a resource on the internet.
     // What is URI : A URI (Uniform Resource Identifier) is a string that specifies the location of a resource on the internet.
     // URI is more general than URL.
+
+    @Operation(
+            summary = "Get task by ID",
+            description = "Retrieves a specific task by its UUID",
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "Task found",
+                            content = @Content(mediaType = "application/json",
+                                    schema = @Schema(implementation = TaskResponseDTO.class))),
+                    @ApiResponse(responseCode = "404", description = "Task not found")
+            }
+    )
     @GetMapping("/{id}")
     public ResponseEntity<TaskResponseDTO> getTaskById(@PathVariable UUID id) {
         TaskResponseDTO task = taskService.getTaskById(id);
@@ -87,6 +125,16 @@ public class TaskController {
         return ResponseEntity.ok(task);
     }
 
+    @Operation(
+            summary = "Update task status",
+            description = "Updates the status of an existing task",
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "Task status updated successfully",
+                            content = @Content(mediaType = "application/json",
+                                    schema = @Schema(implementation = Task.class))),
+                    @ApiResponse(responseCode = "404", description = "Task not found")
+            }
+    )
     @PatchMapping("/{id}/status")
     public ResponseEntity<Task> updateTaskStatus(
             // @PathVariable : It is a Spring annotation that tells Spring to automatically extract the value of the id parameter from the URL.
@@ -104,6 +152,16 @@ public class TaskController {
         }
     }
 
+    @Operation(
+            summary = "Find task by title",
+            description = "Retrieves a task with the specified title",
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "Task found",
+                            content = @Content(mediaType = "application/json",
+                                    schema = @Schema(implementation = TaskResponseDTO.class))),
+                    @ApiResponse(responseCode = "404", description = "Task not found")
+            }
+    )
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteTask(@PathVariable UUID id) {
         taskService.deleteTask(id);
