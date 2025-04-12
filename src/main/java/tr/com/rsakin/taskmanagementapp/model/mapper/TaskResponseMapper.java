@@ -1,6 +1,7 @@
 package tr.com.rsakin.taskmanagementapp.model.mapper;
 
 import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
 import org.mapstruct.factory.Mappers;
 import tr.com.rsakin.taskmanagementapp.model.dto.response.TaskResponseDTO;
 import tr.com.rsakin.taskmanagementapp.model.entity.Task;
@@ -12,6 +13,7 @@ public interface TaskResponseMapper {
 
     TaskResponseMapper INSTANCE = Mappers.getMapper(TaskResponseMapper.class);
 
+    // @Mapping(target = "myTitle", source = "title")
     TaskResponseDTO toDTO(Task task);
 
     List<TaskResponseDTO> toDTOList(List<Task> tasks);

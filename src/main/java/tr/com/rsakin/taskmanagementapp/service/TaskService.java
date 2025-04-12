@@ -38,7 +38,8 @@ public class TaskService {
     }
 
     public List<TaskResponseDTO> getAllTasks() {
-        return TASK_MAPPER.toDTOList(new ArrayList<>(taskStore.values())); // Using MapStruct
+        ArrayList<Task> tasks = new ArrayList<>(taskStore.values());
+        return TASK_MAPPER.toDTOList(tasks); // Using MapStruct
     }
 
     public TaskResponseDTO getTaskById(UUID id) {
@@ -51,6 +52,9 @@ public class TaskService {
         if (task == null) {
             throw new IllegalArgumentException("Task not found with ID: " + id);
         }
+
+        if (task.getStatus() == Task.TaskStatus.BLOCKED)
+            throw new TaskStatusNotAvailableException("Task not found with ID: " + id);
 
         Task updatedTask = task.updateStatus(newStatus);
         taskStore.put(id, updatedTask);

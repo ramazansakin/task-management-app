@@ -12,6 +12,7 @@ import tr.com.rsakin.taskmanagementapp.model.dto.request.TaskRequest;
 import tr.com.rsakin.taskmanagementapp.model.dto.response.TaskResponseDTO;
 import tr.com.rsakin.taskmanagementapp.model.entity.Task;
 import tr.com.rsakin.taskmanagementapp.service.TaskService;
+import tr.com.rsakin.taskmanagementapp.service.TaskStatusNotAvailableException;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -72,7 +73,7 @@ public class TaskController {
     // Create, Read, Update, Delete
     @GetMapping
     public ResponseEntity<List<TaskResponseDTO>> getAllTasks() {
-        return ResponseEntity.ok(taskService.getAllTasks());
+        return ResponseEntity.status(HttpStatus.OK).body(taskService.getAllTasks());
     }
 
     // What is URL : A URL (Uniform Resource Locator) is a string that specifies the location of a resource on the internet.
@@ -98,6 +99,9 @@ public class TaskController {
             return ResponseEntity.ok(updatedTask);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.notFound().build();
+        } catch (TaskStatusNotAvailableException ex) {
+            // custom buss logic
+            return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
         }
     }
 
