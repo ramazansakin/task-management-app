@@ -67,6 +67,11 @@ public class Task {
         updatePriorityFields();
     }
 
+    @PostUpdate
+    protected void onUpdate() {
+        updatedAt = LocalDateTime.now();
+    }
+
     private void updatePriorityFields() {
         Priority priority = switch (status) {
             case PENDING, COMPLETED -> new LowPriority();

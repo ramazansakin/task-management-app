@@ -15,8 +15,12 @@ import java.util.UUID;
 public interface TaskRepository extends JpaRepository<Task, UUID> {
 
     // Standard JPA method queries
+    // SELECT * FROM tasks WHERE status = "DONE"
     List<Task> findByStatus(Task.TaskStatus status);
 
+    // "abc", "ABt", "aBy", "ghjgjh-ab-asdasd"
+    // "ab"
+    // WHERE title ILIKE "%ab%"
     List<Task> findByTitleContainingIgnoreCase(String title);
 
     Optional<Task> findFirstByOrderByCreatedAtDesc();
