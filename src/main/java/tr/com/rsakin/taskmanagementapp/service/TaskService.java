@@ -6,6 +6,7 @@ import org.springframework.stereotype.Service;
 import tr.com.rsakin.taskmanagementapp.model.dto.response.TaskResponseDTO;
 import tr.com.rsakin.taskmanagementapp.model.dto.response.TaskStatistics;
 import tr.com.rsakin.taskmanagementapp.model.entity.Task;
+import tr.com.rsakin.taskmanagementapp.model.exception.TaskNotFoundException;
 import tr.com.rsakin.taskmanagementapp.model.mapper.ManualTaskMapper;
 import tr.com.rsakin.taskmanagementapp.model.mapper.TaskResponseMapper;
 import tr.com.rsakin.taskmanagementapp.repository.TaskRepository;
@@ -59,7 +60,7 @@ public class TaskService {
     @Transactional
     public Task updateTaskStatus(UUID id, Task.TaskStatus newStatus) {
         Task task = taskRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Task not found with ID: " + id));
+                .orElseThrow(() -> new TaskNotFoundException(id));
 
         if (task.getStatus() == Task.TaskStatus.BLOCKED)
             throw new TaskStatusNotAvailableException("Task not found with ID: " + id);

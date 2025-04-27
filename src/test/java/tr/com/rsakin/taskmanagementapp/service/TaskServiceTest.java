@@ -1,21 +1,19 @@
 package tr.com.rsakin.taskmanagementapp.service;
 
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import tr.com.rsakin.taskmanagementapp.model.dto.request.TaskRequest;
 import tr.com.rsakin.taskmanagementapp.model.dto.response.TaskResponseDTO;
 import tr.com.rsakin.taskmanagementapp.model.entity.Task;
+import tr.com.rsakin.taskmanagementapp.model.exception.TaskNotFoundException;
 import tr.com.rsakin.taskmanagementapp.repository.TaskRepository;
 
 import java.time.LocalDateTime;
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -23,71 +21,123 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class TaskServiceTest {
 
+    // 3A - Arrange/Init, Act/Stub, Assert/Validation
+
     @Mock
     private TaskRepository taskRepository;
 
     @InjectMocks
     private TaskService taskService;
 
+    @BeforeEach
+    void setUp() {
+        // Clear all interactions before each test
+    }
+
+    @BeforeAll
+    static void beforeAll() {
+        // Do something before all tests
+    }
+
+    @AfterEach
+    void tearDown() {
+        // Clear all interactions after each test
+    }
+
+    @AfterAll
+    static void afterAll() {
+        // Do something after all tests
+    }
+
+
     @Test
-    void shouldCreateTask() {
+    // @ParameterizedTest(name = "{index} => title={0}, description={1}")
+    void shouldCreateTask_successfull() {
+        // Arrange - Initialize
         TaskRequest request = new TaskRequest("Test Task", "Description");
         Task task = Task.builder().id(UUID.randomUUID()).title("Test Task").description("Description").build();
-        TaskResponseDTO responseDTO = new TaskResponseDTO(task.getId(), task.getTitle(), task.getDescription(), task.getStatus(), task.getCreatedAt(), task.getPriority());
+        // Expected response
+        TaskResponseDTO expectedResponse = new TaskResponseDTO(task.getId(), task.getTitle(), task.getDescription(), task.getStatus(), task.getCreatedAt(), task.getPriority());
 
+        // Act - Stubbing
         when(taskRepository.save(any(Task.class))).thenReturn(task);
 
-        TaskResponseDTO createdTask = taskService.createTask(request.getTitle(), request.getDescription());
+        // Actual response
+        TaskResponseDTO actualResponse = taskService.createTask(request.getTitle(), request.getDescription());
 
-        assertNotNull(createdTask);
-        assertEquals("Test Task", createdTask.title());
-        verify(taskRepository).save(any(Task.class));
+        System.out.println("# Actual response : " + actualResponse);
+
+        // Assert - Validation
+        assertNotNull(actualResponse); // 1
+        assertEquals(expectedResponse.title(), actualResponse.title()); // 2
+        assertEquals(expectedResponse.description(), actualResponse.description()); // 3
+        verify(taskRepository).save(any(Task.class)); // 4
     }
 
     @Test
     void shouldReturnAllTasks() {
-        Task task = new Task(UUID.randomUUID(), "Task 1", "Description", Task.TaskStatus.PENDING, LocalDateTime.now(), LocalDateTime.now(), 1, "Low");
-        List<Task> tasks = Collections.singletonList(task);
-        when(taskRepository.findAll()).thenReturn(tasks);
+        // Arrange - Initialize
+        Task task = new Task(UUID.randomUUID(), "Task 1", "Description",
+                Task.TaskStatus.PENDING, LocalDateTime.now(), LocalDateTime.now(), 1, "Low");
+        Task task2 = new Task(UUID.randomUUID(), "Task 2", "Description 2",
+                Task.TaskStatus.BLOCKED, LocalDateTime.now(), LocalDateTime.now(), 2, "Medium");
 
-        List<TaskResponseDTO> taskResponseDTOList = taskService.getAllTasks();
+        List<Task> expectedTasks = new ArrayList<>();
+        expectedTasks.addAll(Arrays.asList(task, task2));
 
-        assertNotNull(taskResponseDTOList);
-        assertEquals(1, taskResponseDTOList.size());
+        // Act - Stubbing
+        when(taskRepository.findAll()).thenReturn(expectedTasks);
+
+        // Actual response
+        List<TaskResponseDTO> actualResponse = taskService.getAllTasks();
+
+        // Assert - Validation
+        assertNotNull(actualResponse);
+        assertEquals(expectedTasks.size(), actualResponse.size());
     }
 
     @Test
-    void shouldReturnNullWhenTaskNotFoundById() {
+    void shouldReturnNullWhenTaskNotFoundById_Failure() {
+        // Arrange - Initialize
         UUID nonExistingId = UUID.randomUUID();
-        when(taskRepository.findById(nonExistingId)).thenReturn(Optional.empty());
 
+        // Act - Stubbing
+        when(taskRepository.findById(any(UUID.class))).thenReturn(Optional.empty());
+
+        // Actual response
         TaskResponseDTO task = taskService.getTaskById(nonExistingId);
 
+        // Assert - Validation
         assertNull(task);
     }
 
     @Test
     void shouldUpdateTaskStatus() {
+        // Arrange
         UUID taskId = UUID.randomUUID();
         Task task = new Task(taskId, "Task 1", "Description", Task.TaskStatus.PENDING, LocalDateTime.now(), LocalDateTime.now(), 1, "Low");
         Task updatedTask = task.updateStatus(Task.TaskStatus.COMPLETED);
 
+        // Act
         when(taskRepository.findById(taskId)).thenReturn(Optional.of(task));
         when(taskRepository.save(any(Task.class))).thenReturn(updatedTask);
 
-        Task savedTask = taskService.updateTaskStatus(taskId, Task.TaskStatus.COMPLETED);
+        Task actualResponse = taskService.updateTaskStatus(taskId, Task.TaskStatus.COMPLETED);
 
-        assertNotNull(savedTask);
-        assertEquals(Task.TaskStatus.COMPLETED, savedTask.getStatus());
-        verify(taskRepository).save(any(Task.class));
+        // Assert
+        assertNotNull(actualResponse);
+        assertEquals(updatedTask.getStatus(), actualResponse.getStatus());
+        verify(taskRepository, times(1)).save(any(Task.class));
     }
 
+    // Edge Case
     @Test
     void shouldThrowExceptionWhenTaskNotFoundForUpdate() {
         UUID nonExistingId = UUID.randomUUID();
+
         when(taskRepository.findById(nonExistingId)).thenReturn(Optional.empty());
 
-        assertThrows(IllegalArgumentException.class, () -> taskService.updateTaskStatus(nonExistingId, Task.TaskStatus.COMPLETED));
+        assertThrows(TaskNotFoundException.class, () -> taskService.updateTaskStatus(nonExistingId, Task.TaskStatus.COMPLETED));
     }
 
     @Test

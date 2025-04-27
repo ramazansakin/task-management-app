@@ -128,8 +128,14 @@ public class Task {
         public int getValue() {
             return TaskPriority.LOW.value;
         }
+
+        @Override
+        public String toString() {
+            return "LowPriority";
+        }
     }
 
+    @ToString
     public static final class MediumPriority implements Priority {
         @Override
         public String getLabel() {
@@ -142,6 +148,7 @@ public class Task {
         }
     }
 
+    @ToString
     public static final class HighPriority implements Priority {
         @Override
         public String getLabel() {

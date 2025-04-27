@@ -13,6 +13,7 @@
     <version>0.0.1-SNAPSHOT</version>
     <name>task-management-app</name>
     <description>task-management-app</description>
+    <packaging>jar</packaging>
 
     <properties>
         <java.version>21</java.version>

@@ -1,5 +1,6 @@
 package tr.com.rsakin.taskmanagementapp.controller;
 
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -8,10 +9,12 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.userdetails.UserDetails;
 import tr.com.rsakin.taskmanagementapp.model.dto.request.StatusUpdateRequest;
 import tr.com.rsakin.taskmanagementapp.model.dto.request.TaskRequest;
 import tr.com.rsakin.taskmanagementapp.model.dto.response.TaskResponseDTO;
 import tr.com.rsakin.taskmanagementapp.model.entity.Task;
+import tr.com.rsakin.taskmanagementapp.security.JwtUtil;
 import tr.com.rsakin.taskmanagementapp.service.TaskService;
 
 import java.time.LocalDateTime;
@@ -32,19 +35,38 @@ class TaskControllerTest {
     @InjectMocks
     private TaskController taskController;
 
+    private String token;
+
+    @BeforeAll
+    static void setUp() {
+
+        // Token generation
+        JwtUtil jwtUtil = new JwtUtil();
+        // UserDetails userDetails = CustomUserDetailsService.loadUserByUsername("user");
+        // token = jwtUtil.generateToken(userDetails);
+        // add token to header
+    }
+
+    // 3A - Arrange, Act, Assert
     @Test
     void shouldCreateTask() {
+
+        // Arrange
         TaskRequest request = new TaskRequest("Test Task", "Description");
         TaskResponseDTO taskResponseDTO = new TaskResponseDTO(UUID.randomUUID(), "Test Task",
                 "Description", Task.TaskStatus.PENDING, LocalDateTime.now(), new Task.LowPriority());
 
-        when(taskService.createTask(anyString(), anyString())).thenReturn(taskResponseDTO);
+        // Act
+        when(taskService.createTask(any(String.class), anyString())).thenReturn(taskResponseDTO);
 
         ResponseEntity<TaskResponseDTO> response = taskController.createTask(request);
 
-        assertEquals(HttpStatus.CREATED, response.getStatusCode());
-        assertNotNull(response.getBody());
-        assertEquals("Test Task", response.getBody().title());
+        System.out.println("Response : " + response);
+
+        // Assert
+        assertEquals(HttpStatus.CREATED, response.getStatusCode()); // 1
+        assertNotNull(response.getBody()); // 2
+        assertEquals(taskResponseDTO.title(), response.getBody().title()); // 3
     }
 
     @Test
@@ -80,7 +102,7 @@ class TaskControllerTest {
     void shouldReturnNotFoundWhenTaskByIdDoesNotExist() {
         UUID nonExistingId = UUID.randomUUID();
 
-        when(taskService.getTaskById(nonExistingId)).thenReturn(null);
+        when(taskService.getTaskById(any(UUID.class))).thenReturn(null);
 
         ResponseEntity<TaskResponseDTO> response = taskController.getTaskById(nonExistingId);
 
@@ -115,7 +137,10 @@ class TaskControllerTest {
 
     @Test
     void shouldDeleteTask() {
+        // Arrange
         UUID taskId = UUID.randomUUID();
+
+        // Act
         doNothing().when(taskService).deleteTask(taskId);
 
         ResponseEntity<Void> response = taskController.deleteTask(taskId);
