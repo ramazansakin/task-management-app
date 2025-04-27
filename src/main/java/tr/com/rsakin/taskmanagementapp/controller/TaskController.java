@@ -4,6 +4,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import tr.com.rsakin.taskmanagementapp.model.dto.request.PriorityUpdateRequest;
 import tr.com.rsakin.taskmanagementapp.model.dto.request.StatusUpdateRequest;
@@ -56,6 +57,7 @@ public class TaskController {
     // What is JSON : JSON is a data format that is used to transfer data over the internet.
     // What is XML : XML is a data format that is used to transfer data over the internet.
     // Endpoint : A URL that is used to access a resource on a server.
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
     @PostMapping(produces = MediaType.APPLICATION_JSON_VALUE, consumes = MediaType.APPLICATION_JSON_VALUE)
     // HTTP Post
     // HTTP Status Code : 201
@@ -70,6 +72,7 @@ public class TaskController {
 
     // CRUD Operations
     // Create, Read, Update, Delete
+    @PreAuthorize("hasRole('ROLE_ADMIN') || hasRole('ROLE_USER')")
     @GetMapping
     public ResponseEntity<List<TaskResponseDTO>> getAllTasks() {
         return ResponseEntity.status(HttpStatus.OK).body(taskService.getAllTasks());

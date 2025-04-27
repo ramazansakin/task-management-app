@@ -12,14 +12,24 @@ public class CustomUserDetailsService implements UserDetailsService {
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        if (!username.equals("user")) {
-            throw new UsernameNotFoundException("User not found");
+
+        if (username.equals("user")) {
+            return User.builder()
+                    .username("user")
+                    .password(new BCryptPasswordEncoder().encode("password"))
+                    .roles("USER")
+                    .build();
         }
-        return User.builder()
-                .username("user")
-                .password(new BCryptPasswordEncoder().encode("password"))
-                .roles("USER")
-                .build();
+
+        if (username.equals("admin")) {
+            return User.builder()
+                    .username("admin")
+                    .password(new BCryptPasswordEncoder().encode("password123"))
+                    .roles("ADMIN")
+                    .build();
+        }
+
+        throw new UsernameNotFoundException("User not found");
     }
 
 }
